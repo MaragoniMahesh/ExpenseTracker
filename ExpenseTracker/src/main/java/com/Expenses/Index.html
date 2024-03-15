@@ -6,71 +6,133 @@
     <title>Expense Tracker</title>
     <style>
         /* Basic styling */
+        /* Global styles */
+        /* Global styles */
+        /* Global styles */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            background-color: rgb(132, 132, 223); /* Light gray background */
         }
+
         .container {
             max-width: 600px;
             margin: 20px auto;
             padding: 20px;
-            border: 1px solid #ccc;
+            border: 1px solid #dc4242;
             border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 5px rgba(237, 49, 49, 0.1);
+            background-color: #57aec6; /* White background */
         }
-        .expense-input {
+
+        h1 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        /* Form styles */
+        input[type="text"],
+        input[type="date"],
+        input[type="number"] {
             width: calc(100% - 100px);
             padding: 8px;
             margin-bottom: 10px;
+            border: 1px solid #346da5;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
-        .date-input {
-            width: 150px;
-            padding: 8px;
-            margin-bottom: 10px;
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #0a121b;
         }
-        .money-input {
-            width: 100px;
-            padding: 8px;
-            margin-bottom: 10px;
-        }
-        .btn {
+
+        button {
             padding: 8px 16px;
             background-color: #007bff;
-            color: #fff;
+            color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
-        .btn:hover {
-            background-color: #0056b3;
+
+        button:hover {
+            background-color: #0af545;
         }
+
+        /* Green light indicator */
+        .success-indicator {
+            width: 10px;
+            height: 10px;
+            background-color: #28a745;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        /* Expense list styles */
         .expense-list {
             list-style-type: none;
             padding: 0;
         }
+
         .expense-item {
             padding: 8px;
             border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .delete-btn {
+
+        .expense-item:last-child {
+            border-bottom: none;
+        }
+
+        .delete-btn,
+        .edit-btn {
+            padding: 6px 12px;
             background-color: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
         }
+
+        .edit-btn {
+            background-color: #ffc107;
+            margin-left: 5px;
+        }
+
+        .delete-btn:hover,
+        .edit-btn:hover {
+            background-color: #c82333;
+        }
+
+        /* Total styles */
         .total {
             font-weight: bold;
             margin-top: 10px;
+            text-align: right;
         }
+
+
+
     </style>
 </head>
 <body>
 <div class="container">
     <h1>Expense Tracker</h1>
-    <input type="text" id="expense" class="expense-input" placeholder="Enter expense">
+    <input type="text" id="name" class="expense-input" placeholder="Enter expense">
     <input type="date" id="date" class="date-input">
     <input type="number" id="amount" class="money-input" placeholder="Enter amount">
     <button onclick="addExpense()" class="btn">Add Expense</button>
     <ul id="expense-list" class="expense-list">
-        <!-- Expenses will be dynamically added here -->
+
     </ul>
     <div id="total" class="total"></div>
 </div>
@@ -81,7 +143,7 @@
 
     // Function to fetch expenses from backend
     function fetchExpenses() {
-        fetch('/expenses/Expenses')
+        fetch('http://localhost:8080/expenses/Expenses')
             .then(response => response.json())
             .then(data => {
                 expenses = data;
@@ -92,22 +154,22 @@
 
     // Function to add expense
     function addExpense() {
-        const expenseInput = document.getElementById('expense');
+        const nameInput = document.getElementById('name');
         const dateInput = document.getElementById('date');
         const amountInput = document.getElementById('amount');
 
-        const expenseValue = expenseInput.value.trim();
-        const dateValue = dateInput.value;
+        const expenseValue = nameInput.value.trim();
+        const dateValue = dateInput.value; // Format the date
         const amountValue = parseFloat(amountInput.value);
 
-        if (expenseValue !== '' && dateValue !== '' && !isNaN(amountValue)) {
+        if (expenseValue !== '' && dateValue !== 'Invalid Date' && !isNaN(amountValue)) {
             const newExpense = {
-                expense: expenseValue,
+                name: expenseValue,
                 date: dateValue,
                 amount: amountValue
             };
 
-            fetch('/expenses/Expense', {
+            fetch('http://localhost:8080/expenses/Expense', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -122,32 +184,65 @@
                 })
                 .then(data => {
                     console.log('Expense added successfully:', data);
-                    expenses.push(newExpense);
+                    expenses.push(data); // Assuming the backend returns the added expense with an ID
                     renderExpenses();
-                    expenseInput.value = '';
+                    nameInput.value = '';
                     dateInput.value = '';
                     amountInput.value = '';
                 })
                 .catch(error => {
                     console.error('Error adding expense:', error);
                 });
+
+            nameInput.value = '';
+            dateInput.value = '';
+            amountInput.value = '';
         }
     }
 
+
+
     // Function to delete expense
-    function deleteExpense(index) {
-        const expenseId = expenses[index].id; // Assuming the backend returns an ID for each expense
-        fetch(`/expenses/${expenseId}`, {
+    function deleteExpense(id) {
+        fetch(`http://localhost:8080/expenses/${id}`, {
             method: 'DELETE',
         })
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Failed to delete expense');
                 }
-                expenses.splice(index, 1);
+                expenses = expenses.filter(expense => expense.id !== id);
                 renderExpenses();
             })
             .catch(error => console.error('Error deleting expense:', error));
+    }
+
+    // Function to edit expense
+    function editExpense(id, newName, newDate, newAmount) {
+        fetch(`http://localhost:8080/expenses/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: newName,
+                date: newDate,
+                amount: newAmount
+            }),
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to edit expense');
+                }
+                const index = expenses.findIndex(expense => expense.id === id);
+                if (index !== -1) {
+                    expenses[index].name = newName;
+                    expenses[index].date = newDate;
+                    expenses[index].amount = newAmount;
+                    renderExpenses();
+                }
+            })
+            .catch(error => console.error('Error editing expense:', error));
     }
 
     // Function to render expenses
@@ -155,21 +250,36 @@
         const expenseList = document.getElementById('expense-list');
         expenseList.innerHTML = '';
         let totalAmount = 0;
-        expenses.forEach((expense, index) => {
+        expenses.forEach(expense => {
             const li = document.createElement('li');
-            li.innerHTML = `<span>${expense.expense} - ${expense.date} - $${expense.amount}</span>`;
+            li.innerHTML = `<span>${expense.name} - ${expense.date} - ${expense.amount}</span>`;
             li.className = 'expense-item';
+
             const deleteBtn = document.createElement('button');
             deleteBtn.textContent = 'Delete';
             deleteBtn.className = 'btn delete-btn';
             deleteBtn.onclick = function() {
-                deleteExpense(index);
+                deleteExpense(expense.id);
             };
             li.appendChild(deleteBtn);
+
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Edit';
+            editBtn.className = 'btn edit-btn';
+            editBtn.onclick = function() {
+                const newName = prompt('Enter new name:', expense.name);
+                const newDate = prompt('Enter new date:', expense.date);
+                const newAmount = prompt('Enter new amount:', expense.amount);
+                if (newName !== null && newDate !== null && newAmount !== null) {
+                    editExpense(expense.id, newName, newDate, parseFloat(newAmount));
+                }
+            };
+            li.appendChild(editBtn);
+
             expenseList.appendChild(li);
             totalAmount += expense.amount;
         });
-        document.getElementById('total').textContent = `Total: $${totalAmount.toFixed(2)}`;
+        document.getElementById('total').textContent = `Total: ${totalAmount.toFixed(2)}`;
     }
 
     // Fetch expenses when the page loads
@@ -177,3 +287,6 @@
 </script>
 </body>
 </html>
+
+
+
