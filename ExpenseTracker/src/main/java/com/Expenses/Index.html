@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <style>
+        /* Basic styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .expense-input {
+            width: calc(100% - 100px);
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .date-input {
+            width: 150px;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .money-input {
+            width: 100px;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .btn {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .expense-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .expense-item {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        .total {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Expense Tracker</h1>
+    <input type="text" id="expense" class="expense-input" placeholder="Enter expense">
+    <input type="date" id="date" class="date-input">
+    <input type="number" id="amount" class="money-input" placeholder="Enter amount">
+    <button onclick="addExpense()" class="btn">Add Expense</button>
+    <ul id="expense-list" class="expense-list">
+        <!-- Expenses will be dynamically added here -->
+    </ul>
+    <div id="total" class="total"></div>
+</div>
+
+<script>
+    // Array to store expenses
+    let expenses = [];
+
+    // Function to fetch expenses from backend
+    function fetchExpenses() {
+        fetch('/expenses/Expenses')
+            .then(response => response.json())
+            .then(data => {
+                expenses = data;
+                renderExpenses();
+            })
+            .catch(error => console.error('Error fetching expenses:', error));
+    }
+
+    // Function to add expense
+    function addExpense() {
+        const expenseInput = document.getElementById('expense');
+        const dateInput = document.getElementById('date');
+        const amountInput = document.getElementById('amount');
+
+        const expenseValue = expenseInput.value.trim();
+        const dateValue = dateInput.value;
+        const amountValue = parseFloat(amountInput.value);
+
+        if (expenseValue !== '' && dateValue !== '' && !isNaN(amountValue)) {
+            const newExpense = {
+                expense: expenseValue,
+                date: dateValue,
+                amount: amountValue
+            };
+
+            fetch('/expenses/Expense', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newExpense),
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to add expense');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Expense added successfully:', data);
+                    expenses.push(newExpense);
+                    renderExpenses();
+                    expenseInput.value = '';
+                    dateInput.value = '';
+                    amountInput.value = '';
+                })
+                .catch(error => {
+                    console.error('Error adding expense:', error);
+                });
+        }
+    }
+
+    // Function to delete expense
+    function deleteExpense(index) {
+        const expenseId = expenses[index].id; // Assuming the backend returns an ID for each expense
+        fetch(`/expenses/${expenseId}`, {
+            method: 'DELETE',
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to delete expense');
+                }
+                expenses.splice(index, 1);
+                renderExpenses();
+            })
+            .catch(error => console.error('Error deleting expense:', error));
+    }
+
+    // Function to render expenses
+    function renderExpenses() {
+        const expenseList = document.getElementById('expense-list');
+        expenseList.innerHTML = '';
+        let totalAmount = 0;
+        expenses.forEach((expense, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${expense.expense} - ${expense.date} - $${expense.amount}</span>`;
+            li.className = 'expense-item';
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.className = 'btn delete-btn';
+            deleteBtn.onclick = function() {
+                deleteExpense(index);
+            };
+            li.appendChild(deleteBtn);
+            expenseList.appendChild(li);
+            totalAmount += expense.amount;
+        });
+        document.getElementById('total').textContent = `Total: $${totalAmount.toFixed(2)}`;
+    }
+
+    // Fetch expenses when the page loads
+    fetchExpenses();
+</script>
+</body>
+</html>
